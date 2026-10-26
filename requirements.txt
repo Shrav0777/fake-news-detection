@@ -1,0 +1,19 @@
+# Fake News Detection - Python Dependencies
+# Install: pip install -r requirements.txt
+
+# Data processing
+pandas
+numpy
+
+# Machine Learning
+scikit-learn
+
+# Visualization
+matplotlib
+seaborn
+
+# Web Application
+streamlit
+
+# Model persistence
+joblib
