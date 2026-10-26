@@ -1,6 +1,5 @@
 # 📰 Fake News Detection System
 
-**AI Laboratory — Experiment No. 10**
 
 An AI-powered Fake News Detection System using Natural Language Processing (NLP) and Machine Learning. The system analyzes news headlines and article text to predict whether news is likely **REAL** or **FAKE** based on patterns learned from a labelled dataset of 72,000+ news articles.
 
