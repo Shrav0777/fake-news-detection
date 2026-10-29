@@ -1,24 +1,199 @@
 # 📰 Fake News Detection System
 
 
-An AI-powered Fake News Detection System using Natural Language Processing (NLP) and Machine Learning. The system analyzes news headlines and article text to predict whether news is likely **REAL** or **FAKE** based on patterns learned from a labelled dataset of 72,000+ news articles.
+An AI-powered Fake News Detection System utilizing Natural Language Processing (NLP) and Machine Learning. The system analyzes news headlines and article body text to classify articles as either **REAL** or **FAKE** based on linguistic and lexical patterns learned from a benchmark dataset of over 72,000 news articles.
 
-> ⚠️ **Disclaimer:** This system provides model predictions based on learned text patterns. It is **not** a definitive fact-checker. Always verify news through multiple trusted sources.
+> ⚠️ **Important Disclaimer:** This system provides probabilistic predictions based on textual patterns learned from training data. It is **not** a definitive fact-checking agency. Always cross-verify news articles across multiple trusted journalistic sources.
+
+---
+
+## 🎯 Problem Statement & Background
+
+The proliferation of misinformation and fake news in the digital era poses critical challenges to society. False narratives can rapidly distort public perception, destabilize democratic processes, manipulate financial markets, and incite real-world harm. 
+
+Traditional manual fact-checking is labor-intensive and cannot scale to match the velocity of digital publishing and social media diffusion. This project implements an automated, machine-learning-driven text classification pipeline to detect deceptive and fabricated news content using statistical language representations and supervised classification models.
+
+---
+
+## ⚙️ System Architecture & Workflow
+
+The end-to-end detection system operates through four core stages:
+
+```
+[ Input News Text / Headline ]
+              │
+              ▼
+[ 1. Text Preprocessing & Cleaning ]
+  • Lowercasing
+  • URL & HTML stripping
+  • Non-alphabetic character removal
+  • Whitespace collapse
+              │
+              ▼
+[ 2. Feature Extraction (TF-IDF) ]
+  • Vocabulary: 50,000 features
+  • Unigrams & Bigrams (1, 2)
+  • Inverse document frequency weighting
+              │
+              ▼
+[ 3. Classifier Inference ]
+  • Passive Aggressive Classifier (Champion model)
+  • Linear decision boundary evaluation
+              │
+              ▼
+[ Prediction Output: REAL / FAKE + Confidence % ]
+```
+
+1. **Text Input:** News headlines, full article bodies, or uploaded CSV files are ingested.
+2. **Text Normalization:** Unstructured raw text is stripped of web markup, punctuation, numbers, and noise.
+3. **TF-IDF Vectorization:** Cleaned text is transformed into high-dimensional numerical feature vectors.
+4. **Machine Learning Classifier:** A trained classifier predicts the binary class label (0 = Fake, 1 = Real) along with a prediction confidence score.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Component | Technology |
+| Component | Technology | Description |
+|---|---|---|
+| **Language** | Python 3.9+ | Core programming runtime |
+| **Data Processing** | Pandas, NumPy | Data manipulation and tabular analysis |
+| **Machine Learning** | Scikit-learn | ML estimators, vectorizers, and evaluation metrics |
+| **Feature Extraction** | TF-IDF Vectorizer | Sublinear term frequency-inverse document frequency |
+| **Classifiers** | Logistic Regression, Naive Bayes, Passive Aggressive | Supervised classification algorithms |
+| **Visualization** | Matplotlib, Seaborn | Metric plotting, confusion matrices, and ROC curves |
+| **Web Interface** | Streamlit | Responsive, real-time prediction application |
+| **Model Persistence** | Joblib | Fast disk serialization of models and vectorizers |
+
+---
+
+## 📁 Dataset Information & Schema
+
+The system is trained and evaluated on the **WELFake (WELl-known Fake news) dataset**, a consolidated benchmark collection merging four recognized misinformation datasets: Kaggle, McIntire, Reuters, and BuzzFeed Political. The dataset was published in *IEEE Transactions on Computational Social Systems*.
+
+- **Dataset Source:** [Kaggle — Fake News Classification (WELFake Dataset)](https://www.kaggle.com/datasets/saurabhshahane/fake-news-classification)
+
+### Dataset Columns
+
+| Column | Data Type | Description |
+|---|---|---|
+| `Unnamed: 0` | Integer | Serial index (dropped during preprocessing) |
+| `title` | String | Headline of the news article |
+| `text` | String | Full article body text |
+| `label` | Integer | Ground truth binary label: **`0` = FAKE**, **`1` = REAL** |
+
+### Dataset Statistics (After Preprocessing)
+
+| Metric | Value |
 |---|---|
-| Programming Language | Python 3.9+ |
-| Data Processing | Pandas, NumPy |
-| Machine Learning | Scikit-learn |
-| NLP Features | TF-IDF Vectorization |
-| Classifiers | Logistic Regression, Multinomial Naive Bayes, Passive Aggressive Classifier |
-| Visualization | Matplotlib, Seaborn |
-| Web Interface | Streamlit |
-| Model Persistence | Joblib |
+| **Total Cleaned Samples** | **63,303** |
+| **Fake Articles (Label 0)** | 34,519 (54.5%) |
+| **Real Articles (Label 1)** | 28,784 (45.5%) |
+| **Training Split (80%)** | 50,642 samples |
+| **Testing Split (20%)** | 12,661 samples |
+| **TF-IDF Vocabulary Size** | 50,000 features |
+
+The class distribution visualization is saved at [`results/class_distribution.png`](file:///c:/Users/Shravani/fake%20news%20detection/results/class_distribution.png).
+
+---
+
+## 🔧 Data Preprocessing Pipeline
+
+Raw news articles contain syntax noise, formatting artifacts, and irrelevant characters that degrade classification accuracy. The dataset undergoes a rigorous 7-stage preprocessing pipeline:
+
+1. **Index Dropping:** Strips unnecessary serial identifiers (`Unnamed: 0`).
+2. **Label Sanitization:** Retains exclusively valid binary labels (0 for Fake, 1 for Real), discarding invalid rows.
+3. **Handling Missing Values:** Fills missing `NaN` values in `title` and `text` with empty strings to prevent null pointer exceptions.
+4. **Field Combination:** Concatenates `title` and `text` into a unified `content` column, ensuring the model benefits from both headline cues and full article context.
+5. **Text Normalization & Cleaning:**
+   - Converts all text to lowercase.
+   - Removes URLs and hyperlinks (`http\S+|www\.\S+`).
+   - Strips HTML markup (`<.*?>`).
+   - Filters out non-alphabetic characters (`[^a-z\s]`), eliminating special punctuation and digits.
+   - Collapses contiguous whitespace into single spaces and strips outer whitespace.
+6. **Empty Row Pruning:** Drops any entries that result in empty strings after normalization.
+7. **Deduplication:** Removes exact duplicate articles sharing identical text and labels to prevent data leakage and bias.
+
+---
+
+## 📊 Feature Extraction — TF-IDF Theory
+
+Machine learning models require numerical feature vectors. **TF-IDF (Term Frequency – Inverse Document Frequency)** quantifies how important a term is to a document relative to an entire corpus.
+
+### Theoretical Breakdown
+
+1. **Term Frequency (TF):** Measures how frequently a word $t$ appears in a specific document $d$:
+   $$\text{TF}(t, d) = \frac{\text{Count of } t \text{ in } d}{\text{Total terms in } d}$$
+
+2. **Inverse Document Frequency (IDF):** Measures the rarity of word $t$ across the entire collection of documents $D$:
+   $$\text{IDF}(t, D) = \log\left(\frac{1 + |D|}{1 + |\{d \in D : t \in d\}|}\right) + 1$$
+   Words that occur across almost every document (such as "the", "is", "article") yield low IDF values, whereas domain-specific or sensationalist words receive higher weights.
+
+3. **Composite TF-IDF Weight:**
+   $$\text{TF-IDF}(t, d, D) = \text{TF}(t, d) \times \text{IDF}(t, D)$$
+
+### Concrete Example
+- In an article reporting *"alien invasion confirmed by officials"*, the words *"alien"* and *"invasion"* appear multiple times (high TF) and are relatively rare in mainstream journalism (high IDF), yielding a **high TF-IDF score**.
+- Conversely, ubiquitous stop words like *"the"* appear everywhere (low IDF), yielding near-zero scores.
+- This allows the classifiers to focus on predictive vocabulary signals characteristic of fabricated stories (e.g., hyperbole, unverified claims) versus credible reporting styles.
+
+---
+
+## 🤖 Machine Learning Models & Theory
+
+Three complementary classification algorithms were trained, benchmarked, and evaluated:
+
+### 1. Logistic Regression
+- **Mechanism:** A linear model that estimates the posterior probability $P(Y=1|X)$ using the standard logistic (sigmoid) function:
+  $$P(Y=1|X) = \frac{1}{1 + e^{-(\mathbf{w}^T \mathbf{x} + b)}}$$
+- **Strengths:** Robust baseline, highly interpretable feature coefficients, well-calibrated probabilistic outputs, and resilient to overfitting in high-dimensional sparse spaces.
+
+### 2. Multinomial Naive Bayes
+- **Mechanism:** A probabilistic classifier based on Bayes' Theorem under the naive assumption that feature occurrences are conditionally independent given the class label:
+  $$P(C_k | \mathbf{x}) \propto P(C_k) \prod_{i=1}^n P(x_i | C_k)$$
+- **Strengths:** Extremely fast training time ($<0.1$s) and effective for categorical word count and frequency distributions.
+
+### 3. Passive Aggressive Classifier (Champion Model)
+- **Mechanism:** An online, margin-based classification algorithm specifically designed for large-scale learning:
+  - **Passive:** If the incoming example is classified correctly with a margin exceeding 1 ($\ell_t = 0$), model weights remain untouched.
+  - **Aggressive:** If a misclassification or margin violation occurs ($\ell_t > 0$), weights are updated immediately with a step size proportional to the loss:
+    $$\mathbf{w}_{t+1} = \mathbf{w}_t + \text{sign}(y_t) \tau_t \mathbf{x}_t, \quad \text{where } \tau_t = \frac{\ell_t}{\|\mathbf{x}_t\|^2 + \frac{1}{2C}}$$
+- **Strengths:** Exceptional convergence speed on high-dimensional text datasets and highest overall empirical accuracy.
+
+### Model Selection Criteria
+The final deployment model is selected based on the highest **weighted F1-Score** on the held-out test split (12,661 samples), ensuring a balanced trade-off between identifying true misinformation (Recall) and minimizing false accusations against legitimate journalism (Precision).
+
+---
+
+## 📈 Evaluation Metrics & Theoretical Definitions
+
+| Metric | Mathematical Formula | Practical Interpretation |
+|---|---|---|
+| **Accuracy** | $\frac{TP + TN}{TP + TN + FP + FN}$ | Overall fraction of correct predictions across both classes. |
+| **Precision** | $\frac{TP}{TP + FP}$ | When the model flags an article as FAKE, how frequently is it truly fake? |
+| **Recall (Sensitivity)** | $\frac{TP}{TP + FN}$ | Out of all actually fake articles in the test set, what fraction did the model catch? |
+| **F1-Score** | $2 \times \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$ | Harmonic mean balancing Precision and Recall. |
+| **ROC-AUC** | Area under the ROC curve | Diagnostic capability to distinguish REAL from FAKE across all classification thresholds ($1.0 = \text{perfect}, 0.5 = \text{random}$). |
+| **Confusion Matrix** | $\begin{bmatrix} TN & FP \\ FN & TP \end{bmatrix}$ | Detailed breakdown of true positives, false positives, true negatives, and false negatives. |
+
+---
+
+## 🏆 Model Evaluation Results & Performance Benchmarks
+
+The models were evaluated on an independent test split of **12,661 news articles**. The results are summarized below:
+
+| Model | Accuracy | Precision | Recall | Weighted F1-Score | ROC-AUC | Training Time |
+|---|---|---|---|---|---|---|
+| **Passive Aggressive (Best)** 🏆 | **96.52%** | **96.52%** | **96.52%** | **0.9652** | **0.9951** | ~0.5 s |
+| **Logistic Regression** | 95.51% | 95.50% | 95.51% | 0.9550 | 0.9926 | ~1.1 s |
+| **Multinomial Naive Bayes** | 89.81% | 89.90% | 89.81% | 0.8983 | 0.9614 | ~0.1 s |
+
+### Performance Visualizations
+
+Generated evaluation plots from training and testing are preserved in the `results/` directory:
+- **Accuracy Comparison:** [`results/model_comparison_accuracy.png`](file:///c:/Users/Shravani/fake%20news%20detection/results/model_comparison_accuracy.png)
+- **Multi-Metric Comparison (Precision, Recall, F1):** [`results/model_comparison_metrics.png`](file:///c:/Users/Shravani/fake%20news%20detection/results/model_comparison_metrics.png)
+- **Confusion Matrix (Champion Model):** [`results/confusion_matrix.png`](file:///c:/Users/Shravani/fake%20news%20detection/results/confusion_matrix.png)
+- **Receiver Operating Characteristic (ROC) Curve:** [`results/roc_curve.png`](file:///c:/Users/Shravani/fake%20news%20detection/results/roc_curve.png)
 
 ---
 
@@ -26,40 +201,29 @@ An AI-powered Fake News Detection System using Natural Language Processing (NLP)
 
 ```
 fake-news-detection/
-├── app.py                  # Streamlit web application (main interface)
-├── train_model.py          # Dataset loading, cleaning, training, model selection
-├── evaluate_model.py       # Standalone model evaluation & plot regeneration
-├── predict.py              # Reusable prediction module (used by app.py & CLI)
+├── app.py                  # Streamlit web application (Predict Page & Batch Analysis)
+├── train_model.py          # Data pipeline, TF-IDF extraction, training, model selection
+├── evaluate_model.py       # Standalone evaluation & plot regeneration
+├── predict.py              # Core inference module (used by app.py & CLI)
 ├── requirements.txt        # Python package dependencies
-├── README.md               # This file
-├── .gitignore              # Files excluded from version control
+├── README.md               # Complete project theory, documentation & benchmarks
+├── .gitignore              # Ignored files (virtual environments, caches)
 ├── data/
 │   ├── README.md           # Dataset download instructions
-│   ├── WELFake_Dataset.csv # ← YOU download this from Kaggle (not in repo)
-│   └── sample_test.csv     # Small synthetic sample for testing the interface
-├── models/                 # ← Generated after running train_model.py
+│   ├── WELFake_Dataset.csv # Raw benchmark dataset (downloaded from Kaggle)
+│   └── sample_test.csv     # Synthetic sample CSV for batch testing
+├── models/                 # Saved model artifacts
 │   ├── tfidf_vectorizer.joblib
 │   ├── best_model.joblib
 │   └── model_metadata.json
-├── results/                # ← Generated after running train_model.py
-│   ├── evaluation_metrics.json
-│   ├── class_distribution.png
-│   ├── model_comparison_accuracy.png
-│   ├── model_comparison_metrics.png
-│   ├── confusion_matrix.png
-│   └── roc_curve.png
-└── notebooks/              # Optional exploration notebooks
-    └── exploration.ipynb   # (optional — for Google Colab)
+└── results/                # Evaluation reports & visualization figures
+    ├── evaluation_metrics.json
+    ├── class_distribution.png
+    ├── model_comparison_accuracy.png
+    ├── model_comparison_metrics.png
+    ├── confusion_matrix.png
+    └── roc_curve.png
 ```
-
-### Files You Create vs. Generated Files
-
-| File | Source |
-|---|---|
-| `app.py`, `train_model.py`, `evaluate_model.py`, `predict.py` | **You create** (provided in this project) |
-| `requirements.txt`, `README.md`, `.gitignore` | **You create** (provided in this project) |
-| `data/WELFake_Dataset.csv` | **You download** from Kaggle |
-| `models/*`, `results/*` | **Auto-generated** by `train_model.py` |
 
 ---
 
@@ -67,157 +231,106 @@ fake-news-detection/
 
 ### Prerequisites
 - Python 3.9 or higher
-- pip (Python package manager)
-- ~300 MB free disk space (for dataset + model artifacts)
+- `pip` package manager
+- ~300 MB free disk space for dataset and serialized models
 
-### Step 1: Clone or Create the Project
+### 1. Clone / Open Project
 ```bash
-# Create project directory (if not already done)
-mkdir fake-news-detection
-cd fake-news-detection
-
-# Place all source files in this directory
+cd "c:/Users/Shravani/fake news detection"
 ```
 
-### Step 2: Create a Virtual Environment (Recommended)
+### 2. Virtual Environment (Recommended)
 ```bash
 python -m venv venv
 
-# Windows
+# Windows:
 venv\Scripts\activate
 
-# macOS / Linux
+# macOS / Linux:
 source venv/bin/activate
 ```
 
-### Step 3: Install Dependencies
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Step 4: Download the Dataset
-1. Visit: **https://www.kaggle.com/datasets/saurabhshahane/fake-news-classification**
-2. Click **Download** (requires a free Kaggle account).
-3. Extract the ZIP file.
-4. Place `WELFake_Dataset.csv` in the `data/` folder.
+### 4. Dataset Setup (If re-training)
+Place `WELFake_Dataset.csv` into the `data/` folder (downloaded from [Kaggle](https://www.kaggle.com/datasets/saurabhshahane/fake-news-classification)).
 
-**Alternative — Kaggle API:**
-```bash
-pip install kaggle
-# Place your kaggle.json API key in ~/.kaggle/
-kaggle datasets download -d saurabhshahane/fake-news-classification -p data/
-# Then unzip:
-cd data && tar -xf fake-news-classification.zip && cd ..
-```
-
-### Step 5: Train the Model
+### 5. Model Training (Optional — pre-trained artifacts included)
 ```bash
 python train_model.py
 ```
 
-This will:
-- Load and clean the dataset
-- Extract TF-IDF features
-- Train 3 classifiers
-- Evaluate and select the best model
-- Save model artifacts to `models/`
-- Save evaluation plots and metrics to `results/`
-
-**Expected time:** 2–5 minutes depending on your hardware.
-
-### Step 6: Launch the Application
+### 6. Launch Web Application
 ```bash
 streamlit run app.py
 ```
-
-The app will open in your browser at `http://localhost:8501`.
+Open `http://localhost:8501` in your browser.
 
 ---
 
-## 📖 Usage Guide
+## 📖 Web Application Usage Guide
 
-### Single Prediction
-1. Go to the **🔍 Predict** page.
-2. Enter a news headline or article text.
+The Streamlit web interface is dedicated entirely to the **Predict** experience:
+
+### 1. Single Article Prediction
+1. Open the web interface.
+2. Choose your preferred input mode:
+   - **Combined text:** Paste a combined news headline and body.
+   - **Separate headline & article:** Input the headline and body in separate dedicated fields.
 3. Click **🔎 Predict**.
-4. View the result (REAL or FAKE) with confidence score.
+4. The system will display:
+   - Visual result card: **`✅ REAL`** (Emerald) or **`🚫 FAKE`** (Crimson).
+   - **Confidence Score:** Percentage confidence of the classifier.
+   - **Prediction Details:** Expandable drawer displaying numeric label (`0` or `1`), raw confidence value, and cleaned text preview.
+5. Use **🗑️ Clear** to reset inputs.
 
-### Batch Prediction
-1. On the **🔍 Predict** page, scroll to **Batch Prediction from CSV**.
-2. Upload a CSV file with a `text` column (optionally, a `title` column).
-3. View predictions and download the results as CSV.
-
-### View Performance
-- Go to **📊 Performance** to see evaluation metrics, comparison charts, and the confusion matrix.
-
-### Dataset Info
-- Go to **📁 Dataset Info** for dataset statistics, preprocessing details, and TF-IDF explanation.
+### 2. Batch Prediction via CSV
+1. Scroll down to **Batch Prediction from CSV**.
+2. Upload a CSV file containing at least a `text` column (optional `title` column).
+3. The system predicts all rows, displays real-time summary statistics, displays a preview table, and provides a **📥 Download Predictions CSV** button.
+4. You can test this feature using the provided [`data/sample_test.csv`](file:///c:/Users/Shravani/fake%20news%20detection/data/sample_test.csv).
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & Verification
 
-### Quick Command-Line Test
+### Command-Line Prediction Test
+Run an instant test without opening the browser:
 ```bash
-python predict.py "Scientists discover new species of deep-sea fish near Hawaii"
+python -c "from predict import predict_single; print(predict_single('Scientists discover new deep-sea species near Hawaii'))"
 ```
 
-### Test Cases
+### Validation Test Cases
 
-| # | Input | Expected Behavior |
+| Scenario | Input | Expected Output |
 |---|---|---|
-| 1 | A well-formatted news article (~200 words) | Prediction displayed as REAL or FAKE |
-| 2 | A headline only (e.g., "President signs new bill") | Prediction displayed (may warn about short input) |
-| 3 | Empty input | Warning: "Please enter some text" |
-| 4 | Very short text (< 10 chars) | Warning about unreliable prediction |
-| 5 | A long article (1000+ words) | Prediction displayed normally |
-| 6 | CSV without `text` column | Error: "must have a text column" |
-| 7 | Missing model artifacts | Error: "run train_model.py first" |
-| 8 | Borderline/uncertain text | Prediction shown with disclaimer |
-
-### Using the Sample Test File
-```bash
-# Test batch prediction with the provided sample file
-# Upload data/sample_test.csv through the Streamlit interface
-```
+| **Standard Article** | 200+ word verified news story | Predicted as `REAL` with high confidence |
+| **Sensationalist Story** | Conspiratorial/clickbait headline | Predicted as `FAKE` |
+| **Headline Only** | "President signs new legislative bill" | Prediction provided with short input advisory |
+| **Very Short Text** | Less than 10 characters | Warning notification regarding input length |
+| **Empty Input** | Blank string / whitespace | Warning prompting for text input |
+| **Batch CSV** | CSV with `text` column | Batch predictions with downloadable results |
+| **Invalid CSV** | CSV without `text` column | Clear error prompt indicating missing column |
 
 ---
 
 ## 🔧 Troubleshooting
 
-| Issue | Solution |
-|---|---|
-| `ModuleNotFoundError` | Run `pip install -r requirements.txt` |
-| "Dataset not found" | Download and place `WELFake_Dataset.csv` in `data/` |
-| "Model not found" | Run `python train_model.py` |
-| Streamlit won't start | Check if port 8501 is free; try `streamlit run app.py --server.port 8502` |
-| `UnicodeDecodeError` | The dataset should be UTF-8. Re-download if corrupted. |
-| Very slow training | Normal on older hardware. ~72K articles × 50K features takes time. |
+| Issue | Cause | Solution |
+|---|---|---|
+| `ModuleNotFoundError` | Dependencies missing | Run `pip install -r requirements.txt` |
+| `Model not found!` | Model artifacts missing | Run `python train_model.py` to generate `models/` artifacts |
+| Port conflict on 8501 | Streamlit port in use | Run `streamlit run app.py --server.port 8502` |
+| Uploaded CSV error | Missing required header | Ensure your CSV file includes a column named `text` |
 
 ---
 
-## 📊 About the Models
+## 📄 License & References
 
-### Logistic Regression
-A linear classifier that predicts the probability of a class (REAL/FAKE) using a logistic function. Works well for text classification because high-dimensional sparse features (like TF-IDF) are naturally suited to linear models.
-
-### Multinomial Naive Bayes
-Based on Bayes' theorem with the assumption that features (word frequencies) are independent. Very fast and often surprisingly effective for text classification.
-
-### Passive Aggressive Classifier
-An online learning algorithm that stays "passive" when the prediction is correct but becomes "aggressive" when it makes an error, updating the model weights significantly. Good for large-scale text classification.
-
-### Model Selection
-The final model is selected automatically based on the highest **weighted F1-score** on the test set. F1-score balances precision (avoiding false alarms) and recall (catching all fake news), making it a robust metric for this task.
-
----
-
-## 📄 License
-
-This project is for educational purposes (AI Laboratory — Experiment 10).
-The WELFake dataset is licensed under CC BY 4.0.
-
-## 📚 References
-
-1. Verma, P.K., et al. "WELFake: Word Embedding Over Linguistic Features for Fake News Detection." *IEEE Transactions on Computational Social Systems*, 2021. DOI: 10.1109/TCSS.2021.3068519.
-2. Kaggle Dataset: https://www.kaggle.com/datasets/saurabhshahane/fake-news-classification
+- **License:** Educational and research use (AI Laboratory — Experiment 10).
+- **Dataset License:** CC BY 4.0 (WELFake Dataset).
+- **Academic Citation:**
+  > Verma, P. K., Agrawal, P., Amorim, I., & Prodan, R. (2021). "WELFake: Word Embedding Over Linguistic Features for Fake News Detection." *IEEE Transactions on Computational Social Systems*, 8(4), 881-893. DOI: [10.1109/TCSS.2021.3068519](https://doi.org/10.1109/TCSS.2021.3068519).
